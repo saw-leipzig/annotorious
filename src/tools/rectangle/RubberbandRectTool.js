@@ -7,19 +7,17 @@ import EditableRect from './EditableRect';
  */
 export default class RubberbandRectTool extends EventEmitter {
 
-  constructor(g, config, env) {
+  constructor(g) {
     super();
 
     this.svg = g.closest('svg');
     this.g = g;
-    this.config = config;
-    this.env = env;
 
     this.rubberband = null;
   }
-
+  undo(){}
   _attachListeners = () => {
-    this.svg.addEventListener('mousemove', this.onMouseMove);    
+    this.svg.addEventListener('mousemove', this.onMouseMove);
     document.addEventListener('mouseup', this.onMouseUp);
   }
 
@@ -36,12 +34,12 @@ export default class RubberbandRectTool extends EventEmitter {
     pt.y = y + top;
 
     return pt.matrixTransform(this.g.getScreenCTM().inverse());
-  }   
+  }
 
   startDrawing = evt => {
     const { x, y } = this._toSVG(evt.layerX, evt.layerY);
     this._attachListeners();
-    this.rubberband = new RubberbandRect(x, y, this.g, this.env);
+    this.rubberband = new RubberbandRect(x, y, this.g);
   }
 
   stop = () => {
@@ -55,22 +53,17 @@ export default class RubberbandRectTool extends EventEmitter {
     const { x , y } = this._toSVG(evt.layerX, evt.layerY);
     this.rubberband.dragTo(x, y);
   }
-  
+
   onMouseUp = evt => {
     this._detachListeners();
 
     const { w } = this.rubberband.bbox;
 
     if (w > 3) {
-      // Emit the SVG shape with selection attached    
-      const { element, mask } = this.rubberband;
-      element.annotation = this.rubberband.toSelection();
-
-      // Emit the completed shape...
-      this.emit('complete', element);
-
-      // ...and remove the mask
-      mask.parentNode.removeChild(mask);
+      // Emit the SVG shape with selection attached
+      const shape = this.rubberband.shape;
+      shape.annotation = this.rubberband.toSelection();
+      this.emit('complete', shape);
     } else {
       this.emit('cancel', evt);
       this.stop();
@@ -78,7 +71,7 @@ export default class RubberbandRectTool extends EventEmitter {
   }
 
   createEditableShape = annotation =>
-    new EditableRect(annotation, this.g, this.config, this.env);
+    new EditableRect(annotation, this.g);
 
   get isDrawing() {
     return this.rubberband != null;

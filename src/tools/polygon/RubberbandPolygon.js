@@ -1,39 +1,28 @@
 import { Selection } from '@recogito/recogito-client-core';
-import { toSVGTarget } from '../../selectors/EmbeddedSVG';
-import { SVG_NAMESPACE } from '../../SVG';
-import Mask from './PolygonMask';
+import { toSVGTarget } from '../../annotations/selectors/EmbeddedSVG';
+import { SVG_NAMESPACE } from '../../SVGConst';
 
 export default class RubberbandPolygon {
 
-  constructor(anchor, g, env) {
+  constructor(anchor, g) {
     this.g = document.createElementNS(SVG_NAMESPACE, 'g');
     this.g.setAttribute('class', 'a9s-selection');
 
-    this.env = env;
-
-    this.polygon = document.createElementNS(SVG_NAMESPACE, 'g');
-
     this.outer = document.createElementNS(SVG_NAMESPACE, 'polygon');
-    this.outer.setAttribute('class', 'a9s-outer');
+    this.outer.setAttribute('class', 'outer');
+    //this.outer.setAttribute('stroke-linejoin','arcs');
+
 
     this.inner = document.createElementNS(SVG_NAMESPACE, 'polygon');
-    this.inner.setAttribute('class', 'a9s-inner');
+    //this.inner.setAttribute('stroke-linejoin','arcs');
+    this.inner.setAttribute('class', 'inner');
 
-    this.points = [ anchor ];
+    this.points = [ anchor, anchor ];
 
     this.setPoints(this.points);
 
-    this.mask = new Mask(env.image, this.inner);
-
-    this.polygon.appendChild(this.outer);
-    this.polygon.appendChild(this.inner);
-
-    // Additionally, selection remains hidden until 
-    // the user actually moves the mouse
-    this.g.style.display = 'none';
-
-    this.g.appendChild(this.mask.element);
-    this.g.appendChild(this.polygon);
+    this.g.appendChild(this.outer);
+    this.g.appendChild(this.inner);
 
     this.isCollapsed = true;
 
@@ -47,31 +36,32 @@ export default class RubberbandPolygon {
   }
 
   dragTo = xy => {
-    // Make visible
-    this.g.style.display = null;
-
     this.isCollapsed = false;
 
-    const rubberband = [ ...this.points, xy ];
+    const head = this.points.slice(0, this.points.length - 1);
+    const rubberband = [ ...head, xy, head[0] ];
     this.setPoints(rubberband);
-    this.mask.redraw();
   }
 
   addPoint = xy => {
+    const head = this.points.slice(0, this.points.length - 1);
+
     // Don't add a new point if distance < 2 pixels
-    const lastCorner = this.points[this.points.length - 1];
+    const lastCorner = head[head.length - 1];
     const dist = Math.pow(xy[0] - lastCorner[0], 2) + Math.pow(xy[1] - lastCorner[1], 2);
-    
+
     if (dist > 4) {
-      this.points = [ ...this.points, xy ];
-      this.setPoints(this.points);   
-      this.mask.redraw();
+      this.points = [ ...head, xy, head[0] ];
+      this.setPoints(this.points);
     }
   }
 
-  get element() {
-    return this.polygon;
+  undo = () => {
+    if (this.points.length>2){
+      this.points.pop();
+    }
   }
+
 
   destroy = () => {
     this.g.parentNode.removeChild(this.g);
@@ -79,7 +69,7 @@ export default class RubberbandPolygon {
   }
 
   toSelection = () => {
-    return new Selection(toSVGTarget(this.g, this.env.image));
+    return new Selection(toSVGTarget(this.g));
   }
 
 }

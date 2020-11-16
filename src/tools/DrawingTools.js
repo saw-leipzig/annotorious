@@ -4,18 +4,12 @@ import RubberbandPolygonTool from './polygon/RubberbandPolygonTool';
 
 /** The drawing tool 'registry' **/
 class DrawingToolRegistry extends EventEmitter {
- 
-  constructor(g, config, env) {
-    super(); 
+
+  constructor(g) {
+    super();
 
     // SVG annotation layer group
     this._g = g;
-
-    // Annotorious user config
-    this._config = config;
-
-    // Environment settings
-    this._env = env;
 
     // Registered tool implementations
     this._registered = {};
@@ -25,18 +19,35 @@ class DrawingToolRegistry extends EventEmitter {
 
     this.setDefaults();
   }
-
+  getToolName(){
+    if (this._current===null){
+      return ""
+    }
+    else if (this._current instanceof RubberbandPolygonTool) {
+      return "polygon"
+    }
+    else if (this._current instanceof RubberbandRectTool) {
+      return "rect"
+    }
+    else{return "error"}
+  }
   setDefaults() {
     this.registerTool('rect', RubberbandRectTool);
     this.registerTool('polygon', RubberbandPolygonTool);
     this.setCurrent('rect');
   }
+  undo = () =>{
+    if (this._current.rubberband){
+      this._current.rubberband.undo();
 
+    }
+    //console.log(this);
+  }
   registerTool = (id, impl) => {
     this._registered[id] = impl;
   }
 
-  /** 
+  /**
    * Sets a drawing tool by providing an implementation, or the ID
    * of a built-in toll.
    */
@@ -44,7 +55,7 @@ class DrawingToolRegistry extends EventEmitter {
     if (typeof toolOrId === 'string' || toolOrId instanceof String) {
       const Tool = this._registered[toolOrId];
       if (Tool) {
-        this._current = new Tool(this._g, this._config, this._env);
+        this._current = new Tool(this._g);
         this._current.on('complete', evt => this.emit('complete', evt));
         this._current.on('cancel', evt => this.emit('cancel', evt));
       }
@@ -55,15 +66,15 @@ class DrawingToolRegistry extends EventEmitter {
 
   /** TODO inefficient - maybe organize this in a different way **/
   forShape = svgShape => {
-    const inner = svgShape.querySelector('.a9s-inner');
+    const inner = svgShape.querySelector('.inner');
     const Tool = this._registered[inner.nodeName];
-    return Tool ? new Tool(this._g, this._config, this._env) : null;
+    return Tool ? new Tool(this._g) : null;
   }
 
   get current() {
     return this._current;
   }
-  
+
 }
 
 export default DrawingToolRegistry;

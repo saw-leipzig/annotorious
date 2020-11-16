@@ -7,13 +7,11 @@ import EditablePolygon from './EditablePolygon';
  */
 export default class RubberbandPolygonTool extends EventEmitter {
 
-  constructor(g, config, env) {
+  constructor(g) {
     super();
 
     this.svg = g.closest('svg');
     this.g = g;
-    this.config = config;
-    this.env = env;
 
     this.isDrawing = false;
 
@@ -22,13 +20,15 @@ export default class RubberbandPolygonTool extends EventEmitter {
 
   _attachListeners = () => {
     this.svg.addEventListener('mousemove', this.onMouseMove);
-    this.svg.addEventListener('dblclick', this.onDblClick);
+    //this.svg.addEventListener('dblclick', this.onDblClick);
+    this.svg.addEventListener('keyup', this.onKeyUp);
     document.addEventListener('mouseup', this.onMouseUp);
   }
 
   _detachListeners = () => {
     this.svg.removeEventListener('mousemove', this.onMouseMove);
-    this.svg.removeEventListener('dblclick', this.onDblClick);
+    //this.svg.removeEventListener('dblclick', this.onDblClick);
+    this.svg.removeEventListener('keyup', this.onKeyUp);
     document.removeEventListener('mouseup', this.onMouseUp);
   }
 
@@ -43,15 +43,18 @@ export default class RubberbandPolygonTool extends EventEmitter {
   }
 
   startDrawing = evt => {
+    console.log("startDrawing triggered");
     if (!this.isDrawing) {
       this.isDrawing = true;
 
       const { x, y } = this._toSVG(evt.layerX, evt.layerY);
       this._attachListeners();
-      this.rubberband = new RubberbandPolygon([ x, y ], this.g, this.env);
+      this.rubberband = new RubberbandPolygon([ x, y ], this.g);
     }
   }
-
+  onKeyUp = evt => {
+    console.log("KeyUp triggered.");
+  }
   stop = () => {
     this._detachListeners();
     this.isDrawing = false;
@@ -68,16 +71,29 @@ export default class RubberbandPolygonTool extends EventEmitter {
   }
 
   onMouseUp = evt => {
-    if (this.rubberband.isCollapsed) {
-      this.emit('cancel', evt);
-      this.stop();
-    } else {
-      const { x , y } = this._toSVG(evt.layerX, evt.layerY);
-      this.rubberband.addPoint([ x, y ]);
+    if (evt.altKey){
+      this.onDblClick(evt);
+    }
+    else if (evt.ctrlKey) {
+      this.rubberband.undo();
+  }
+    else{
+      if (this.rubberband.isCollapsed) {
+        this.emit('cancel', evt);
+        this.stop();
+      } else {
+        const { x , y } = this._toSVG(evt.layerX, evt.layerY);
+        this.rubberband.addPoint([ x, y ]);
+      }
     }
   }
-
+  undo = () =>{
+    if (this.rubberband){
+      this.rubberband.undo();
+    }
+  }
   onDblClick = evt => {
+    console.log("onDblClick: ",evt);
     this._detachListeners();
     this.isDrawing = false;
 
@@ -88,12 +104,9 @@ export default class RubberbandPolygonTool extends EventEmitter {
     const shape = this.rubberband.g;
     shape.annotation = this.rubberband.toSelection();
     this.emit('complete', shape);
-
-    // ...and remove the mask
-    this.rubberband.mask.destroy();
   }
 
   createEditableShape = annotation =>
-    new EditablePolygon(annotation, this.g, this.config, this.env);
+    new EditablePolygon(annotation, this.g);
 
 }
