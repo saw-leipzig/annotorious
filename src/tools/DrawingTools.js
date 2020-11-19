@@ -43,6 +43,13 @@ class DrawingToolRegistry extends EventEmitter {
     }
     //console.log(this);
   }
+  newPart = () =>{
+    if (this._current.rubberband){
+      this._current.rubberband.newPart();
+
+    }
+    //console.log(this);
+  }
   registerTool = (id, impl) => {
     this._registered[id] = impl;
   }

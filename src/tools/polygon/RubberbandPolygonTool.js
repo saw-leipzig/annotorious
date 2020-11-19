@@ -83,6 +83,7 @@ export default class RubberbandPolygonTool extends EventEmitter {
         this.stop();
       } else {
         const { x , y } = this._toSVG(evt.layerX, evt.layerY);
+        console.log("going to addPoint");
         this.rubberband.addPoint([ x, y ]);
       }
     }
